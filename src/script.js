@@ -73,6 +73,28 @@ function initWebgl(){
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 }
 
+// Sound
+import Audio from './libs/audio';
+let myAudio = null
+function initSound(){
+  canvas.addEventListener('click', startAudio)
+}
+
+function startAudio() {
+  console.log('Init 🎶');
+  myAudio = new Audio()
+  myAudio.start( {
+    onBeat: onBeat,
+    live: false,
+    src: '/music/Never_Going_Home.mp3',
+  })
+  canvas.removeEventListener('click', startAudio)
+}
+
+function onBeat() {
+  // console.log(myAudio.values);
+}
+
 // Light
 function addLight(){
   // Lights
@@ -108,6 +130,8 @@ function addEnvMap(){
   textureCube.encoding = THREE.sRGBEncoding;
 
   scene.background = textureCube;
+
+  console.log(textureCube);
 }
 
 
@@ -140,7 +164,7 @@ const createDiscoBall = () => {
   const geometry = new THREE.PlaneGeometry( .2, .2)
   const material = new THREE.MeshPhysicalMaterial({ 
     color: 0xf0f0f0,
-    side: 1,
+    side: 2,
     metalness: .5,
     roughness: .5,
     reflectivity: 0,
@@ -233,29 +257,83 @@ const createDiscoBall = () => {
 
 // Flor
 import { Reflector } from 'three/examples/jsm/objects/Reflector'
-const createFloor = () => {
-  console.log('Create Flor')
-  const geometry = new THREE.CircleGeometry( 5, 32)
+import vertexFloorShader from './webgl/shaders/floor/vert.glsl'
+import fragmentFloorShader from './webgl/shaders/floor/frag.glsl'
 
-  const mesh = new Reflector(
+import vertexReflectorShader from './webgl/shaders/reflector/vert.glsl'
+import fragmentReflectorShader from './webgl/shaders/reflector/frag.glsl'
+
+let materialF = null
+let meshReflector = null
+const createFloor = () => {
+  console.log('Create Floor')
+
+  // Reflector
+  const geometry = new THREE.CircleGeometry( 1.4, 30)
+  meshReflector = new Reflector(
     geometry,
     {
       color: new THREE.Color(0x7f7f7f),
       textureWidth: window.innerWidth * window.devicePixelRatio,
-      textureHeight: window.innerHeight * window.devicePixelRatio
+      textureHeight: window.innerHeight * window.devicePixelRatio,
+      shader: {
+        uniforms: {
+          'color': { value: null },
+          'tDiffuse': { value: null },
+          'textureMatrix': { value: null },
+          'uTime': { value: clock.elapsedTime}
+        },
+        vertexShader: vertexReflectorShader,
+        fragmentShader: fragmentReflectorShader
+      }
     }
   )
-  mesh.rotateX( - Math.PI / 2)
-  mesh.position.y = -1.3
+  meshReflector.rotateX( - Math.PI / 2)
+  meshReflector.position.y = -1.5
 
-  scene.add(mesh)
+  // Floor
+  const geometryF = new THREE.PlaneGeometry(15, 15, 200, 200)
+  materialF = new THREE.RawShaderMaterial({
+    uniforms: {
+      uTime: { value: clock.elapsedTime},
+      uIntencity: { value: .5},
+      uWaves: { value: 3.},
+      uSpeed: { value: 3.},
+    },
+    vertexShader: vertexFloorShader,
+    fragmentShader: fragmentFloorShader,
+    transparent: true,
+    wireframe: false
+  })
+  const meshF = new THREE.Mesh(geometryF, materialF)
+  meshF.rotateX( - Math.PI / 2)
+  meshF.position.y = -1.8
+
+  // GUI
+  const floorSetting = gui.addFolder('Floor Setting')
+  const floorSettingMat = floorSetting.addFolder('Sheader Material')
+  floorSettingMat.add(materialF.uniforms.uIntencity, 'value', .27, .6, .01).name('Intencity')
+  floorSettingMat.add(materialF.uniforms.uWaves, 'value', 0, 5, .1).name('Waves')
+  floorSettingMat.add(materialF.uniforms.uSpeed, 'value', 0, 15, .1).name('Speed')
+  floorSetting.close()
+
+  scene.add(meshReflector, meshF )
 }
 
 const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
 
-    // mirorsInstancedMesh.rotateY(elapsedTime * 0.01)
+    mirorsInstancedMesh.rotation.y = elapsedTime * 0.2
+
+    // Update floor sheaders
+    if (materialF) materialF.uniforms.uTime.value = elapsedTime * 0.2
+
+    if (myAudio){
+      myAudio.update()
+      materialF.uniforms.uIntencity.value = myAudio.values[2]
+      // materialF.uniforms.uSpeed.value = myAudio.values[2] * 4
+    } 
 
     // Update controls
     controls.update()
@@ -268,7 +346,8 @@ const tick = () =>
 }
 
 initWebgl()
-// addEnvMap()
+initSound()
+// addEnvMap() 
 addLight()
 createFloor()
 // createSphereCustomMat()
