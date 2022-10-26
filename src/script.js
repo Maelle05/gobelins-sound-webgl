@@ -25,7 +25,7 @@ const textureLoader = new THREE.TextureLoader()
 const clock = new THREE.Clock()
 
 // Color
-const palette = ['0FC0FC', '7B1DAF', 'FF2FB9', 'D4FF47', '1B3649']
+const palette = ['#0FC0FC', '#7B1DAF', '#FF2FB9', '#1B3649']
 
 function initWebgl(){
   // Canvas
@@ -114,7 +114,7 @@ function startAudio() {
   myAudio.start( {
     onBeat: onBeat,
     live: false,
-    src: '/music/Never_Going_Home.mp3',
+    src: '/music/Noisestorm_-_Crab_Rave_Monstercat_Release.mp3',
   })
   canvas.removeEventListener('click', startAudio)
 }
@@ -128,6 +128,8 @@ function onBeat() {
       instancedMeshTrans[i].intensityTarget = 0
     }
   }
+
+  updateCanvas2D()
 }
 
 // Light
@@ -369,21 +371,60 @@ import vertexWallShader from './webgl/shaders/wall/vert.glsl'
 import fragmentWallShader from './webgl/shaders/wall/frag.glsl'
 const nbSquareWall = 30
 let materialWall = null
+const canvas2D = document.createElement('canvas')
+const ctx = canvas2D.getContext('2d')
+let canvasTex = null
+
 const createWallTwo = () => {
-  const geometry =  new THREE.PlaneGeometry(16, 16, 32, 32)
+  canvas2D.width = 100
+  canvas2D.height = 100
+
+  // canvas2D.style.position = "absolute"
+  // canvas2D.style.zIndex = "9999"
+  // canvas2D.style.backgroundColor = "black"
+
+  // document.querySelector('body').appendChild(canvas2D)
+
+  updateCanvas2D()
+
+
+  const geometry =  new THREE.PlaneGeometry(16, 16, 12, 12)
   materialWall = new THREE.RawShaderMaterial({
     uniforms: {
+      uTime: { value: clock.elapsedTime },
+      uCanvasTex: { value: canvasTex },
+      uIntencity: { value: .3 }
     },
     vertexShader: vertexWallShader,
     fragmentShader: fragmentWallShader,
     transparent: true,
-    wireframe: false
+    wireframe: false,
   })
 
   const wall = new THREE.Mesh( geometry, materialWall )
   wall.translateZ(-8.5)
   wall.translateY(3.5)
   scene.add(wall)
+}
+
+const updateCanvas2D = () => {
+  ctx.clearRect(0, 0, canvas2D.width, canvas2D.height)
+  for (let i = 0; i < 12; i++) {
+    for (let j = 0; j < 12; j++) {
+      if(Math.random()>.9){
+        ctx.beginPath();
+        const colorId = Math.floor(Math.random() * (palette.length - 0 + 1)) + 0;
+        const width =  Math.floor(100/12)
+        const height = Math.floor(100/12)
+        ctx.rect(width*i, height*j, width, height);
+        ctx.fillStyle = palette[colorId];
+        ctx.fill();
+      }
+    }
+  }
+  canvasTex = new THREE.CanvasTexture(canvas2D)
+  canvasTex.minFilter = THREE.NearestFilter
+  canvasTex.magFilter = THREE.NearestFilter
 }
 
 const tick = () =>
@@ -394,10 +435,13 @@ const tick = () =>
 
     // Update floor sheaders
     if (materialF) materialF.uniforms.uTime.value = elapsedTime * 0.2
+    if (materialWall) materialWall.uniforms.uTime.value = elapsedTime * 0.2
 
     if (myAudio){
       myAudio.update()
       materialF.uniforms.uIntencity.value = MathUtils.lerp(materialF.uniforms.uIntencity.value, myAudio.values[2], .4)
+      materialWall.uniforms.uIntencity.value = MathUtils.lerp(materialWall.uniforms.uIntencity.value, myAudio.values[0] * 0.5, .4)
+      materialWall.uniforms.uCanvasTex.value = canvasTex
 
       for (let i = 0; i < nbMirors; i++) {
         instancedMeshTrans[i].intensity = MathUtils.lerp(instancedMeshTrans[i].intensity, instancedMeshTrans[i].intensityTarget, .4)
