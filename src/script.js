@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as dat from 'lil-gui'
+import { MathUtils } from 'three';
 
 /**
  * Base
@@ -11,12 +12,11 @@ let canvas = null
 let scene = null
 let sizes = null
 let camera = null
-let controls = null
 let renderer = null
-
 
 // Debug
 const gui = new dat.GUI()
+gui.close()
 
 // Textures
 const textureLoader = new THREE.TextureLoader()
@@ -26,7 +26,6 @@ const clock = new THREE.Clock()
 
 // Color
 const palette = ['0FC0FC', '7B1DAF', 'FF2FB9', 'D4FF47', '1B3649']
-
 
 function initWebgl(){
   // Canvas
@@ -61,16 +60,44 @@ function initWebgl(){
   camera.position.set(0.25, 1, 5)
   scene.add(camera)
 
-  // Controls
-  controls = new OrbitControls(camera, canvas)
-  controls.enableDamping = true
-
   // Renderer
   renderer = new THREE.WebGLRenderer({
     canvas: canvas
   })
   renderer.setSize(sizes.width, sizes.height)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+}
+
+function isMobileDevice() { 
+  if( navigator.userAgent.match(/iPhone/i)
+  || navigator.userAgent.match(/webOS/i)
+  || navigator.userAgent.match(/Android/i)
+  || navigator.userAgent.match(/iPad/i)
+  || navigator.userAgent.match(/iPod/i)
+  || navigator.userAgent.match(/BlackBerry/i)
+  || navigator.userAgent.match(/Windows Phone/i)
+  ){
+     return true;
+   }
+  else {
+     return false;
+   }
+ }
+// Controls
+const mouse = { x: 0, y: 0 }
+const mouseTarget = { x: 0, y: 0 }
+function initCameraControls() {
+  if (!isMobileDevice()) {
+    window.addEventListener('mousemove', (e)=>{
+      mouseTarget.x = (e.clientX - sizes.width/2) / (sizes.width/2)
+      mouseTarget.y = (e.clientY - sizes.height/2) / (sizes.height/2)
+    })
+  } else {
+    mouseTarget.y = 2
+  }
+  
+  // Controls
+  
 }
 
 // Sound
@@ -83,6 +110,7 @@ function initSound(){
 function startAudio() {
   console.log('Init 🎶');
   myAudio = new Audio()
+  myAudio.showPreview = false
   myAudio.start( {
     onBeat: onBeat,
     live: false,
@@ -92,7 +120,14 @@ function startAudio() {
 }
 
 function onBeat() {
-  // console.log(myAudio.values);
+  // updateDiscoBall(myAudio.values[2] * 0.3)
+  for (let i = 0; i < nbMirors; i++) {
+    if (Math.random() > .93 && myAudio.volume * .04 > 0.10) {
+      instancedMeshTrans[i].intensityTarget = myAudio.volume * .07 
+    } else {
+      instancedMeshTrans[i].intensityTarget = 0
+    }
+  }
 }
 
 // Light
@@ -158,6 +193,8 @@ const nbMirors = 433
 let mirorsInstancedMesh = null
 const dummy = new THREE.Object3D()
 
+let instancedMeshTrans = []
+
 const createDiscoBall = () => {
   console.log('Disco Mirors 🪩')
 
@@ -180,6 +217,21 @@ const createDiscoBall = () => {
   discoSettingMat.add(material, 'reflectivity', 0, 1, .01)
   discoSetting.close()
 
+  for (let i = 0; i < nbMirors; i++) {
+    const objTrans = {
+      intensity: 0,
+      intensityTarget: 0
+    }
+    instancedMeshTrans.push(objTrans)
+  }
+
+  updateDiscoBall()
+
+  mirorsInstancedMesh.translateY(0.5)
+  scene.add(mirorsInstancedMesh)
+}
+
+const updateDiscoBall = () => {
   for (let i = 0; i < nbMirors; i++) {
     let theta = 0 // Entre 0 et Math.PI*2 
     let phi = 0
@@ -239,6 +291,8 @@ const createDiscoBall = () => {
       r =  .19;
     }
 
+    r += instancedMeshTrans[i].intensity
+
     const x = (r * Math.cos(theta)) * Math.cos(0)
     const y = (r * Math.cos(theta)) * Math.sin(0)
     const z = r * Math.sin(theta)
@@ -248,55 +302,24 @@ const createDiscoBall = () => {
     dummy.updateMatrix();
 
     mirorsInstancedMesh.setMatrixAt( i++, dummy.matrix );
+    mirorsInstancedMesh.instanceMatrix.needsUpdate = true
   }
-
-
-  scene.add(mirorsInstancedMesh)
-
 }
 
 // Flor
-import { Reflector } from 'three/examples/jsm/objects/Reflector'
 import vertexFloorShader from './webgl/shaders/floor/vert.glsl'
 import fragmentFloorShader from './webgl/shaders/floor/frag.glsl'
 
-import vertexReflectorShader from './webgl/shaders/reflector/vert.glsl'
-import fragmentReflectorShader from './webgl/shaders/reflector/frag.glsl'
-
 let materialF = null
-let meshReflector = null
 const createFloor = () => {
   console.log('Create Floor')
-
-  // Reflector
-  const geometry = new THREE.CircleGeometry( 1.4, 30)
-  meshReflector = new Reflector(
-    geometry,
-    {
-      color: new THREE.Color(0x7f7f7f),
-      textureWidth: window.innerWidth * window.devicePixelRatio,
-      textureHeight: window.innerHeight * window.devicePixelRatio,
-      shader: {
-        uniforms: {
-          'color': { value: null },
-          'tDiffuse': { value: null },
-          'textureMatrix': { value: null },
-          'uTime': { value: clock.elapsedTime}
-        },
-        vertexShader: vertexReflectorShader,
-        fragmentShader: fragmentReflectorShader
-      }
-    }
-  )
-  meshReflector.rotateX( - Math.PI / 2)
-  meshReflector.position.y = -1.5
 
   // Floor
   const geometryF = new THREE.PlaneGeometry(15, 15, 200, 200)
   materialF = new THREE.RawShaderMaterial({
     uniforms: {
       uTime: { value: clock.elapsedTime},
-      uIntencity: { value: .5},
+      uIntencity: { value: .3},
       uWaves: { value: 3.},
       uSpeed: { value: 3.},
     },
@@ -307,17 +330,60 @@ const createFloor = () => {
   })
   const meshF = new THREE.Mesh(geometryF, materialF)
   meshF.rotateX( - Math.PI / 2)
-  meshF.position.y = -1.8
+  meshF.position.y = -2.1
 
   // GUI
   const floorSetting = gui.addFolder('Floor Setting')
   const floorSettingMat = floorSetting.addFolder('Sheader Material')
   floorSettingMat.add(materialF.uniforms.uIntencity, 'value', .27, .6, .01).name('Intencity')
-  floorSettingMat.add(materialF.uniforms.uWaves, 'value', 0, 5, .1).name('Waves')
+  floorSettingMat.add(materialF.uniforms.uWaves, 'value', 0, 9, .1).name('Waves')
   floorSettingMat.add(materialF.uniforms.uSpeed, 'value', 0, 15, .1).name('Speed')
   floorSetting.close()
 
-  scene.add(meshReflector, meshF )
+  scene.add( meshF )
+}
+
+// WALLS
+import { Reflector } from 'three/examples/jsm/objects/Reflector'
+const createWallOne = () => {
+  console.log('Create Wall one ')
+  // Reflector
+  const geometry = new THREE.PlaneGeometry( 17, 15, 30, 30)
+  // const meshReflector = new Reflector(
+  //   geometry,
+  //   {
+  //     color: new THREE.Color(0x7f7f7f),
+  //     textureWidth: window.innerWidth * window.devicePixelRatio,
+  //     textureHeight: window.innerHeight * window.devicePixelRatio,
+  //   }
+  // )
+
+  const meshReflector = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0x1B3649}))
+  meshReflector.translateY(4)
+  meshReflector.translateX(8)
+  meshReflector.rotateY(-Math.PI/2)
+  scene.add(meshReflector)
+}
+
+import vertexWallShader from './webgl/shaders/wall/vert.glsl'
+import fragmentWallShader from './webgl/shaders/wall/frag.glsl'
+const nbSquareWall = 30
+let materialWall = null
+const createWallTwo = () => {
+  const geometry =  new THREE.PlaneGeometry(16, 16, 32, 32)
+  materialWall = new THREE.RawShaderMaterial({
+    uniforms: {
+    },
+    vertexShader: vertexWallShader,
+    fragmentShader: fragmentWallShader,
+    transparent: true,
+    wireframe: false
+  })
+
+  const wall = new THREE.Mesh( geometry, materialWall )
+  wall.translateZ(-8.5)
+  wall.translateY(3.5)
+  scene.add(wall)
 }
 
 const tick = () =>
@@ -331,12 +397,22 @@ const tick = () =>
 
     if (myAudio){
       myAudio.update()
-      materialF.uniforms.uIntencity.value = myAudio.values[2]
-      // materialF.uniforms.uSpeed.value = myAudio.values[2] * 4
+      materialF.uniforms.uIntencity.value = MathUtils.lerp(materialF.uniforms.uIntencity.value, myAudio.values[2], .4)
+
+      for (let i = 0; i < nbMirors; i++) {
+        instancedMeshTrans[i].intensity = MathUtils.lerp(instancedMeshTrans[i].intensity, instancedMeshTrans[i].intensityTarget, .4)
+      }
+
+      updateDiscoBall()
     } 
 
     // Update controls
-    controls.update()
+    mouse.x = MathUtils.lerp(mouse.x, mouseTarget.x, .1)
+    mouse.y = MathUtils.lerp(mouse.y, mouseTarget.y, .1)
+    camera.position.x = mouse.x
+    camera.position.y = mouse.y * .3
+    camera.lookAt(0, 0, 0)
+
 
     // Render
     renderer.render(scene, camera)
@@ -346,10 +422,13 @@ const tick = () =>
 }
 
 initWebgl()
+initCameraControls()
 initSound()
 // addEnvMap() 
 addLight()
 createFloor()
+createWallOne()
+createWallTwo()
 // createSphereCustomMat()
 createDiscoBall()
 tick()
