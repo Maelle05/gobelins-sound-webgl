@@ -4,6 +4,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as dat from 'lil-gui'
 import { MathUtils } from 'three';
+import Particles from './Particles';
+
 
 /**
  * Base
@@ -105,6 +107,8 @@ function initCameraControls() {
 // button enter
 let currentPosBal = 6
 let targetPosBal = 6
+let myParticles = null
+let cameraFOV = null
 document.querySelector('#neonShadow').addEventListener('click', start)
 function start(){
   document.querySelector('.ui').style.opacity = 0
@@ -116,6 +120,18 @@ function start(){
     document.querySelector('.ui').style.display = 'none'
   }, 300)
   startAudio()
+
+  setTimeout(()=>{
+    materialF.uniforms.uIntencity.value = 0
+    myParticles = new Particles(sizes, scene)
+    myParticles.generate()
+  }, 55300) 
+
+  setTimeout(()=>{
+    cameraFOV = true
+  }, 24000)
+
+  
 }
 
 // Sound
@@ -160,24 +176,27 @@ function onBeat() {
 }
 
 // Light
+let lightBehind = null
+let lightFront = null
+let lightFrontTow = null
 function addLight(){
   // Lights
   const ambiant = new THREE.AmbientLight(0x202020)
   scene.add(ambiant)
 
-  const lightBehind = new THREE.PointLight(0x0FC0FC, .5)
+  lightBehind = new THREE.PointLight(0x0FC0FC, .5)
   lightBehind.position.x = 5
   lightBehind.position.y = 5
   lightBehind.position.z = -5
   scene.add(lightBehind)
 
-  const lightFront = new THREE.PointLight(0xFF2FB9, .5)
+  lightFront = new THREE.PointLight(0xFF2FB9, .5)
   lightFront.position.x = -5
   lightFront.position.y = -5
   lightFront.position.z = 5
   scene.add(lightFront)
 
-  const lightFrontTow = new THREE.PointLight(0x7B1DAF, .5)
+  lightFrontTow = new THREE.PointLight(0x7B1DAF, .5)
   lightFrontTow.position.x = 5
   lightFrontTow.position.y = -5
   lightFrontTow.position.z = 5
@@ -567,8 +586,24 @@ const tick = () =>
       updateDiscoBall()
     } 
 
+    if(myParticles && myAudio) {
+      myParticles.animate(materialF.uniforms.uIntencity.value )
+    }
+
+    // Mouve lights
+    if (lightBehind, lightFront, lightFrontTow) {
+      lightBehind.position.y = (Math.sin(elapsedTime ) * 4) + 4
+      lightFront.position.y = (-Math.sin(elapsedTime ) * 4) - 4
+      lightFrontTow.position.y = (Math.cos(elapsedTime ) * 4) - 4
+    }
+
     currentPosBal = MathUtils.lerp(currentPosBal, targetPosBal, .01)
     mirorsInstancedMesh.position.y = currentPosBal
+
+    if (cameraFOV) {
+      camera.fov = MathUtils.lerp( camera.fov , 75 + Math.abs( Math.sin(clock.elapsedTime * .3) * 12), .1)
+      camera.updateProjectionMatrix()
+    }
 
     // Update controls
     mouse.x = MathUtils.lerp(mouse.x, mouseTarget.x, .1)
