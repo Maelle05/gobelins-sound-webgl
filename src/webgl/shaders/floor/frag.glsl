@@ -14,5 +14,8 @@ void main() {
   color = mix(pink , blue, vDist*.5);
   color = mix(vec3(.0), color, vPos.z);
 
-  gl_FragColor = vec4(color, 1.);
+  float dist = distance(vPos, vec3(0.));
+  dist = 9. - dist;
+
+  gl_FragColor = vec4(color, dist);
 }

@@ -125,7 +125,7 @@ function start(){
     materialF.uniforms.uIntencity.value = 0
     myParticles = new Particles(sizes, scene)
     myParticles.generate()
-  }, 55300) 
+  }, 55400) 
 
   setTimeout(()=>{
     cameraFOV = true
