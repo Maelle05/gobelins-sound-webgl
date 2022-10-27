@@ -17,6 +17,7 @@ let renderer = null
 // Debug
 const gui = new dat.GUI()
 gui.close()
+gui.hide()
 
 // Textures
 const textureLoader = new THREE.TextureLoader()
@@ -96,16 +97,30 @@ function initCameraControls() {
     mouseTarget.y = 2
   }
   
+  mouseTarget.x = 6
   // Controls
   
+}
+
+// button enter
+let currentPosBal = 6
+let targetPosBal = 6
+document.querySelector('#neonShadow').addEventListener('click', start)
+function start(){
+  document.querySelector('.ui').style.opacity = 0
+  document.querySelector('canvas').style.filter = 'blur(0)'
+
+  targetPosBal = 0.3
+
+  setTimeout(()=>{
+    document.querySelector('.ui').style.display = 'none'
+  }, 300)
+  startAudio()
 }
 
 // Sound
 import Audio from './libs/audio';
 let myAudio = null
-function initSound(){
-  canvas.addEventListener('click', startAudio)
-}
 
 function startAudio() {
   console.log('Init 🎶');
@@ -114,22 +129,34 @@ function startAudio() {
   myAudio.start( {
     onBeat: onBeat,
     live: false,
-    src: '/music/Noisestorm_-_Crab_Rave_Monstercat_Release.mp3',
+    src: '/music/Antoine-crab-song.mov',
   })
   canvas.removeEventListener('click', startAudio)
 }
 
+let lastBeatTime = null
 function onBeat() {
-  // updateDiscoBall(myAudio.values[2] * 0.3)
-  for (let i = 0; i < nbMirors; i++) {
-    if (Math.random() > .93 && myAudio.volume * .04 > 0.10) {
-      instancedMeshTrans[i].intensityTarget = myAudio.volume * .07 
-    } else {
-      instancedMeshTrans[i].intensityTarget = 0
+  if (myAudio.volume > 6) {
+    lastBeatTime = Date.now()
+    for (let i = 0; i < nbMirors; i++) {
+      if (Math.random() > .93 && myAudio.volume * .04 > 0.10) {
+        instancedMeshTrans[i].intensityTarget = myAudio.volume * .05 
+      } else {
+        instancedMeshTrans[i].intensityTarget = 0
+      }
     }
-  }
+    updateCanvas2D(true)
 
-  updateCanvas2D()
+    setTimeout(()=>{
+      if (Date.now() - lastBeatTime > 500) {
+        updateCanvas2D(false)
+        for (let i = 0; i < nbMirors; i++) {
+          instancedMeshTrans[i].intensityTarget = 0
+        }
+
+      }
+    }, 500)
+  }
 }
 
 // Light
@@ -229,7 +256,8 @@ const createDiscoBall = () => {
 
   updateDiscoBall()
 
-  mirorsInstancedMesh.translateY(0.5)
+  // mirorsInstancedMesh.translateY(0.5)
+  mirorsInstancedMesh.translateY(6)
   scene.add(mirorsInstancedMesh)
 }
 
@@ -313,6 +341,7 @@ import vertexFloorShader from './webgl/shaders/floor/vert.glsl'
 import fragmentFloorShader from './webgl/shaders/floor/frag.glsl'
 
 let materialF = null
+let targetSpeed = 3.
 const createFloor = () => {
   console.log('Create Floor')
 
@@ -349,22 +378,103 @@ const createFloor = () => {
 import { Reflector } from 'three/examples/jsm/objects/Reflector'
 const createWallOne = () => {
   console.log('Create Wall one ')
-  // Reflector
+  
+  // Wall 1
   const geometry = new THREE.PlaneGeometry( 17, 15, 30, 30)
-  // const meshReflector = new Reflector(
-  //   geometry,
+  const meshReflector = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0x1B3649}))
+  meshReflector.translateY(4)
+  meshReflector.translateX(8)
+  meshReflector.translateZ(0.2)
+  meshReflector.rotateY(-Math.PI/2)
+  scene.add(meshReflector)
+
+  // Reflectors Wall 1
+  // const ReflectorOneWallOne = new THREE.Mesh(new THREE.PlaneGeometry( 7, 3, 10, 10), new THREE.MeshBasicMaterial({ color: 'red', side: 2}) )
+  const ReflectorOneWallOne = new Reflector(
+    new THREE.PlaneGeometry( 8, 3, 10, 10),
+    {
+      color: new THREE.Color(0x7f7f7f),
+      textureWidth: window.innerWidth * window.devicePixelRatio,
+      textureHeight: window.innerHeight * window.devicePixelRatio,
+    }
+  )
+  ReflectorOneWallOne.rotateY(-Math.PI/2)
+  ReflectorOneWallOne.translateZ(-7.9)
+  ReflectorOneWallOne.translateX(-3)
+  ReflectorOneWallOne.translateY(.2)
+
+  const ReflectorTwoWallOne = new Reflector(
+    new THREE.PlaneGeometry( 8, 3, 10, 10),
+    {
+      color: new THREE.Color(0x7f7f7f),
+      textureWidth: window.innerWidth * window.devicePixelRatio,
+      textureHeight: window.innerHeight * window.devicePixelRatio,
+    }
+  )
+  ReflectorTwoWallOne.rotateY(-Math.PI/2)
+  ReflectorTwoWallOne.translateZ(-7.9)
+  ReflectorTwoWallOne.translateX(-3)
+  ReflectorTwoWallOne.translateY(4)
+
+  const ReflectorThreeWallOne = new Reflector(
+    new THREE.PlaneGeometry( 8, 3, 10, 10),
+    {
+      color: new THREE.Color(0x7f7f7f),
+      textureWidth: window.innerWidth * window.devicePixelRatio,
+      textureHeight: window.innerHeight * window.devicePixelRatio,
+    }
+  )
+  ReflectorThreeWallOne.rotateY(-Math.PI/2)
+  ReflectorThreeWallOne.translateZ(-7.9)
+  ReflectorThreeWallOne.translateX(-3)
+  ReflectorThreeWallOne.translateY(7.9)
+
+  scene.add(ReflectorOneWallOne, ReflectorTwoWallOne, ReflectorThreeWallOne)
+}
+
+const createWallThree = () => {
+  console.log('Create Wall two ')
+  
+  // Wall 1
+  const geometry = new THREE.PlaneGeometry( 17, 15, 30, 30)
+  const meshReflector = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0x1B3649}))
+  meshReflector.translateY(4)
+  meshReflector.translateX(-8)
+  meshReflector.translateZ(0.2)
+  meshReflector.rotateY(Math.PI/2)
+  scene.add(meshReflector)
+
+  // Light Wall 2
+  const LightOneWallTwo = new THREE.Mesh(new THREE.PlaneGeometry( 10, 3, 10, 10), new THREE.MeshBasicMaterial({ color: 'black' , side: 2}) )
+  LightOneWallTwo.rotateY(-Math.PI/2)
+  LightOneWallTwo.rotateZ(Math.PI/2)
+  LightOneWallTwo.translateZ(7.9)
+  LightOneWallTwo.translateX(3.5)
+  LightOneWallTwo.translateY(5.5)
+
+  const LightTwoWallTwo = new THREE.Mesh(new THREE.PlaneGeometry( 10, 3, 10, 10), new THREE.MeshBasicMaterial({ color: 'black' , side: 2}) )
+  // const LightTwoWallTwo = new Reflector(
+  //   new THREE.PlaneGeometry( 10, 3, 10, 10),
   //   {
   //     color: new THREE.Color(0x7f7f7f),
   //     textureWidth: window.innerWidth * window.devicePixelRatio,
   //     textureHeight: window.innerHeight * window.devicePixelRatio,
   //   }
   // )
+  LightTwoWallTwo.rotateY(-Math.PI/2)
+  LightTwoWallTwo.rotateZ(Math.PI/2)
+  LightTwoWallTwo.translateZ(7.9)
+  LightTwoWallTwo.translateX(3.5)
+  LightTwoWallTwo.translateY(1.8)
 
-  const meshReflector = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0x1B3649}))
-  meshReflector.translateY(4)
-  meshReflector.translateX(8)
-  meshReflector.rotateY(-Math.PI/2)
-  scene.add(meshReflector)
+  const LightThreeWallTwo = new THREE.Mesh(new THREE.PlaneGeometry( 10, 3, 10, 10), new THREE.MeshBasicMaterial({ color: 'black' , side: 2}) )
+  LightThreeWallTwo.rotateY(-Math.PI/2)
+  LightThreeWallTwo.rotateZ(Math.PI/2)
+  LightThreeWallTwo.translateZ(7.9)
+  LightThreeWallTwo.translateX(3.5)
+  LightThreeWallTwo.translateY(-1.6)
+
+  scene.add(LightOneWallTwo, LightTwoWallTwo, LightThreeWallTwo)
 }
 
 import vertexWallShader from './webgl/shaders/wall/vert.glsl'
@@ -385,8 +495,7 @@ const createWallTwo = () => {
 
   // document.querySelector('body').appendChild(canvas2D)
 
-  updateCanvas2D()
-
+  // updateCanvas2D()
 
   const geometry =  new THREE.PlaneGeometry(16, 16, 12, 12)
   materialWall = new THREE.RawShaderMaterial({
@@ -402,12 +511,12 @@ const createWallTwo = () => {
   })
 
   const wall = new THREE.Mesh( geometry, materialWall )
-  wall.translateZ(-8.5)
+  wall.translateZ(-8.3)
   wall.translateY(3.5)
   scene.add(wall)
 }
 
-const updateCanvas2D = () => {
+const updateCanvas2D = (isColor) => {
   ctx.clearRect(0, 0, canvas2D.width, canvas2D.height)
   for (let i = 0; i < 12; i++) {
     for (let j = 0; j < 12; j++) {
@@ -417,7 +526,11 @@ const updateCanvas2D = () => {
         const width =  Math.floor(100/12)
         const height = Math.floor(100/12)
         ctx.rect(width*i, height*j, width, height);
-        ctx.fillStyle = palette[colorId];
+        if(isColor){
+          ctx.fillStyle = palette[colorId];
+        } else {
+          ctx.fillStyle = 'black';
+        }
         ctx.fill();
       }
     }
@@ -434,11 +547,15 @@ const tick = () =>
     mirorsInstancedMesh.rotation.y = elapsedTime * 0.2
 
     // Update floor sheaders
-    if (materialF) materialF.uniforms.uTime.value = elapsedTime * 0.2
+    if (materialF){
+       materialF.uniforms.uTime.value = elapsedTime * 0.2
+       materialF.uniforms.uSpeed.value = MathUtils.lerp(materialF.uniforms.uSpeed.value, targetSpeed, .5)
+    }
     if (materialWall) materialWall.uniforms.uTime.value = elapsedTime * 0.2
 
     if (myAudio){
       myAudio.update()
+      // targetSpeed = Math.round(myAudio.values[0])
       materialF.uniforms.uIntencity.value = MathUtils.lerp(materialF.uniforms.uIntencity.value, myAudio.values[2], .4)
       materialWall.uniforms.uIntencity.value = MathUtils.lerp(materialWall.uniforms.uIntencity.value, myAudio.values[0] * 0.5, .4)
       materialWall.uniforms.uCanvasTex.value = canvasTex
@@ -449,6 +566,9 @@ const tick = () =>
 
       updateDiscoBall()
     } 
+
+    currentPosBal = MathUtils.lerp(currentPosBal, targetPosBal, .01)
+    mirorsInstancedMesh.position.y = currentPosBal
 
     // Update controls
     mouse.x = MathUtils.lerp(mouse.x, mouseTarget.x, .1)
@@ -467,12 +587,12 @@ const tick = () =>
 
 initWebgl()
 initCameraControls()
-initSound()
 // addEnvMap() 
 addLight()
 createFloor()
 createWallOne()
 createWallTwo()
+createWallThree()
 // createSphereCustomMat()
 createDiscoBall()
 tick()
