@@ -97,9 +97,8 @@ function initCameraControls() {
     })
   } else {
     mouseTarget.y = 2
+    mouseTarget.x = -3
   }
-  
-  mouseTarget.x = 6
   // Controls
   
 }
