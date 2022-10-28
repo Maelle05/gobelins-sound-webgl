@@ -85,7 +85,8 @@ function isMobileDevice() {
   else {
      return false;
    }
- }
+}
+
 // Controls
 const mouse = { x: 0, y: 0 }
 const mouseTarget = { x: 0, y: 0 }
@@ -99,26 +100,23 @@ function initCameraControls() {
     mouseTarget.y = 2
     mouseTarget.x = -3
   }
-  // Controls
-  
 }
 
-// button enter
-let currentPosBal = 6
-let targetPosBal = 6
+// button enter event
+let currentPosBall = 6
+let targetPosBall = 6
 let myParticles = null
 let cameraFOV = null
 document.querySelector('#neonShadow').addEventListener('click', start)
 function start(){
   document.querySelector('.ui').style.opacity = 0
   document.querySelector('canvas').style.filter = 'blur(0)'
-
-  targetPosBal = 0.3
+  targetPosBall = 0.3
+  startAudio()
 
   setTimeout(()=>{
     document.querySelector('.ui').style.display = 'none'
   }, 300)
-  startAudio()
 
   setTimeout(()=>{
     materialF.uniforms.uIntencity.value = 0
@@ -129,16 +127,12 @@ function start(){
   setTimeout(()=>{
     cameraFOV = true
   }, 24000)
-
-  
 }
 
 // Sound
 import Audio from './libs/audio';
 let myAudio = null
-
 function startAudio() {
-  console.log('Init 🎶');
   myAudio = new Audio()
   myAudio.showPreview = false
   myAudio.start( {
@@ -146,7 +140,6 @@ function startAudio() {
     live: false,
     src: '/music/Antoine-crab-song.mov',
   })
-  canvas.removeEventListener('click', startAudio)
 }
 
 let lastBeatTime = null
@@ -168,13 +161,12 @@ function onBeat() {
         for (let i = 0; i < nbMirors; i++) {
           instancedMeshTrans[i].intensityTarget = 0
         }
-
       }
     }, 500)
   }
 }
 
-// Light
+// Lights
 let lightBehind = null
 let lightFront = null
 let lightFrontTow = null
@@ -202,7 +194,7 @@ function addLight(){
   scene.add(lightFrontTow)
 }
 
-// Env Map
+// Env Map 
 let textureCube = null
 function addEnvMap(){
   const loader = new THREE.CubeTextureLoader();
@@ -221,7 +213,6 @@ function addEnvMap(){
 let materialCustomMat = null
 import sphereVertexShader from './webgl/shaders/sphere/vert.glsl'
 import sphereFragmentShader from './webgl/shaders/sphere/frag.glsl'
-
 const createSphereCustomMat = () => {
   console.log('Create Sphere');
   const geometry = new THREE.SphereGeometry( 1, 32, 32)
@@ -238,9 +229,8 @@ const createSphereCustomMat = () => {
 // Disco Ball
 const nbMirors = 433
 let mirorsInstancedMesh = null
-const dummy = new THREE.Object3D()
-
 let instancedMeshTrans = []
+const dummy = new THREE.Object3D()
 
 const createDiscoBall = () => {
   console.log('Disco Mirors 🪩')
@@ -252,7 +242,6 @@ const createDiscoBall = () => {
     metalness: .5,
     roughness: .5,
     reflectivity: 0,
-    // envMap: textureCube 
   })
   mirorsInstancedMesh = new THREE.InstancedMesh( geometry, material, nbMirors )
 
@@ -354,7 +343,7 @@ const updateDiscoBall = () => {
   }
 }
 
-// Flor
+// Floor
 import vertexFloorShader from './webgl/shaders/floor/vert.glsl'
 import fragmentFloorShader from './webgl/shaders/floor/frag.glsl'
 
@@ -363,7 +352,6 @@ let targetSpeed = 3.
 const createFloor = () => {
   console.log('Create Floor')
 
-  // Floor
   const geometryF = new THREE.PlaneGeometry(15, 15, 200, 200)
   materialF = new THREE.RawShaderMaterial({
     uniforms: {
@@ -471,14 +459,6 @@ const createWallThree = () => {
   LightOneWallTwo.translateY(5.5)
 
   const LightTwoWallTwo = new THREE.Mesh(new THREE.PlaneGeometry( 10, 3, 10, 10), new THREE.MeshBasicMaterial({ color: 'black' , side: 2}) )
-  // const LightTwoWallTwo = new Reflector(
-  //   new THREE.PlaneGeometry( 10, 3, 10, 10),
-  //   {
-  //     color: new THREE.Color(0x7f7f7f),
-  //     textureWidth: window.innerWidth * window.devicePixelRatio,
-  //     textureHeight: window.innerHeight * window.devicePixelRatio,
-  //   }
-  // )
   LightTwoWallTwo.rotateY(-Math.PI/2)
   LightTwoWallTwo.rotateZ(Math.PI/2)
   LightTwoWallTwo.translateZ(7.9)
@@ -506,14 +486,6 @@ let canvasTex = null
 const createWallTwo = () => {
   canvas2D.width = 100
   canvas2D.height = 100
-
-  // canvas2D.style.position = "absolute"
-  // canvas2D.style.zIndex = "9999"
-  // canvas2D.style.backgroundColor = "black"
-
-  // document.querySelector('body').appendChild(canvas2D)
-
-  // updateCanvas2D()
 
   const geometry =  new THREE.PlaneGeometry(16, 16, 12, 12)
   materialWall = new THREE.RawShaderMaterial({
@@ -562,7 +534,10 @@ const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
 
+    // Mouve Disco Ball
     mirorsInstancedMesh.rotation.y = elapsedTime * 0.2
+    currentPosBall = MathUtils.lerp(currentPosBall, targetPosBall, .01)
+    mirorsInstancedMesh.position.y = currentPosBall
 
     // Update floor sheaders
     if (materialF){
@@ -573,7 +548,6 @@ const tick = () =>
 
     if (myAudio){
       myAudio.update()
-      // targetSpeed = Math.round(myAudio.values[0])
       materialF.uniforms.uIntencity.value = MathUtils.lerp(materialF.uniforms.uIntencity.value, myAudio.values[2], .4)
       materialWall.uniforms.uIntencity.value = MathUtils.lerp(materialWall.uniforms.uIntencity.value, myAudio.values[0] * 0.5, .4)
       materialWall.uniforms.uCanvasTex.value = canvasTex
@@ -596,9 +570,7 @@ const tick = () =>
       lightFrontTow.position.y = (Math.cos(elapsedTime ) * 4) - 4
     }
 
-    currentPosBal = MathUtils.lerp(currentPosBal, targetPosBal, .01)
-    mirorsInstancedMesh.position.y = currentPosBal
-
+    // Camera
     if (cameraFOV) {
       camera.fov = MathUtils.lerp( camera.fov , 75 + Math.abs( Math.sin(clock.elapsedTime * .3) * 12), .1)
       camera.updateProjectionMatrix()
